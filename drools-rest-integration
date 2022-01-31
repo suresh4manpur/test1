@@ -1,0 +1,41 @@
+package com.jpmorgan.ans;
+
+import org.kie.api.*;
+import org.kie.api.command.*;
+import org.kie.api.runtime.*;
+import org.kie.internal.command.*;
+import org.kie.server.api.marshalling.*;
+import org.kie.server.api.model.*;
+import org.kie.server.client.*;
+
+import java.util.*;
+
+public class DroolsMain {
+    private static final String url = "http://localhost:8080/kie-server/services/rest/server";
+    private static final String user = "wbadmin";
+    private static final String pass = "wbadmin";
+    private static final MarshallingFormat FORMAT = MarshallingFormat.JSON;
+    private static String CONTAINERID = "ans_1.0.0-SNAPSHOT";
+    private static String  CLASS_NAME = "QualificationRules";
+
+    public static void main(String[] args) {
+        QualificationRules qr = new QualificationRules();
+        qr.setAllocId(1);
+        qr.setBranch("NY");
+        qr.setLob("DDA");
+        qr.setSource("NAF");
+        KieServicesConfiguration configuration = KieServicesFactory.newRestConfiguration(url, user, pass);
+        configuration.setMarshallingFormat(FORMAT);
+
+        RuleServicesClient ruleServicesClient = KieServicesFactory.newKieServicesClient(configuration).getServicesClient(RuleServicesClient.class);
+        List<Command<?>> cmds = new ArrayList<Command<?>>();
+        KieCommands commands = KieServices.Factory.get().getCommands();
+        cmds.add(commands.newInsert(qr, CLASS_NAME));
+        cmds.add(commands.newFireAllRules());
+        BatchExecutionCommand batchExecutionCommand = CommandFactory.newBatchExecution(cmds);
+        ServiceResponse<ExecutionResults> response = ruleServicesClient.executeCommandsWithResults(CONTAINERID, batchExecutionCommand);
+        //QualificationRules qr1 = (QualificationRules)response.getResult().getFactHandle(CLASS_NAME);
+        QualificationRules qr1 = (QualificationRules)response.getResult().getValue(CLASS_NAME);
+        System.out.println("response : "+qr1);
+    }
+}
